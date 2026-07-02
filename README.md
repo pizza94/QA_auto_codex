@@ -2,7 +2,7 @@
 
 Playwright-based browser automation test project.
 
-Test intent and scenario notes are tracked in `docs/test-plan.md`.
+Test intent and scenario notes are tracked in `docs/test-plan.md`. QualityStream menu mapping is tracked in `docs/qualitystream-menu-map.md`.
 
 ## Commands
 
@@ -19,6 +19,7 @@ $env:PLAYWRIGHT_BASE_URL = "http://10.194.5.53:8180"
 $env:PLAYWRIGHT_USERNAME = "your-user-id"
 $env:PLAYWRIGHT_PASSWORD = "your-password"
 npm run test:login -- --project=chromium
+npm run test:qualitystream -- --project=chromium
 ```
 
 ## GitHub Actions
