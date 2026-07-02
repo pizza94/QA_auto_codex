@@ -1,96 +1,97 @@
-# Test Plan
+# 테스트 계획서
 
-This document records the intended Playwright automation scenarios for the IRUDA QA project.
+이 문서는 IRUDA QA 프로젝트의 Playwright 자동화 테스트 시나리오를 관리한다.
 
-Do not store real passwords, session cookies, one-time tokens, or raw chat prompts here. Keep this file focused on test intent, expected behavior, environment requirements, and verified execution history.
+실제 비밀번호, 세션 쿠키, 일회용 토큰, 채팅 프롬프트 원문은 이 문서에 저장하지 않는다. 테스트 목적, 기대 결과, 필요한 환경값, 검증 이력만 기록한다.
 
-## Table of Contents
+## 목차
 
-1. [Update Rule](#1-update-rule)
-2. [Environment](#2-environment)
-3. [Current Scenarios](#3-current-scenarios)
-   1. [TC-001 Login](#tc-001-login)
-4. [Execution History](#4-execution-history)
-5. [CI Notes](#5-ci-notes)
-6. [Backlog](#6-backlog)
+1. [업데이트 규칙](#1-업데이트-규칙)
+2. [환경 정보](#2-환경-정보)
+3. [현재 시나리오](#3-현재-시나리오)
+   1. [TC-001 로그인](#tc-001-로그인)
+4. [실행 이력](#4-실행-이력)
+5. [CI 참고사항](#5-ci-참고사항)
+6. [예정 시나리오](#6-예정-시나리오)
 
-## 1. Update Rule
+## 1. 업데이트 규칙
 
-Update this file whenever a test scenario is completed and the final changes are pushed.
+테스트 시나리오 구현이 완료되고 최종 변경사항이 GitHub에 푸시될 때마다 이 문서를 함께 업데이트한다.
 
-Each update should include:
+각 업데이트에는 다음 내용을 포함한다.
 
-1. Scenario number and name.
-2. Test file path.
-3. Purpose and expected result.
-4. Key selectors or verification signals.
-5. Latest verified run result.
-6. Any CI limitation or follow-up needed.
+1. 시나리오 번호와 이름
+2. 테스트 파일 경로
+3. 테스트 목적과 기대 결과
+4. 주요 셀렉터 또는 검증 기준
+5. 마지막 검증 실행 결과
+6. CI 제한사항 또는 후속 작업
 
-Number new scenarios sequentially as `TC-001`, `TC-002`, `TC-003`, and so on. Keep the table of contents in the same order as the scenario list.
+새 시나리오는 `TC-001`, `TC-002`, `TC-003` 순서로 번호를 부여한다. 목차의 순서도 현재 시나리오 목록과 동일하게 유지한다.
 
-## 2. Environment
+## 2. 환경 정보
 
-- Application base URL: configured through `PLAYWRIGHT_BASE_URL`
-- Login user ID: configured through `PLAYWRIGHT_USERNAME`
-- Login password: configured through `PLAYWRIGHT_PASSWORD`
-- Local target example: `http://10.194.5.53:8180`
+- 애플리케이션 기본 URL: `PLAYWRIGHT_BASE_URL` 환경변수로 설정
+- 로그인 사용자 ID: `PLAYWRIGHT_USERNAME` 환경변수로 설정
+- 로그인 비밀번호: `PLAYWRIGHT_PASSWORD` 환경변수로 설정
+- 로컬 대상 URL 예시: `http://10.194.5.53:8180`
 
-## 3. Current Scenarios
+## 3. 현재 시나리오
 
-### TC-001 Login
+### TC-001 로그인
 
-Status: implemented and locally verified
+상태: 구현 완료, 로컬 검증 완료
 
-File: `tests/login.spec.ts`
+파일: `tests/login.spec.ts`
 
-Purpose:
+목적:
 
-1. Open the IRUDA login page.
-2. Enter a valid user ID and password from environment variables.
-3. Submit the login form.
-4. Verify that the browser leaves the login URL.
-5. Verify that the Data Portal landing page is visible.
+1. IRUDA 로그인 페이지를 연다.
+2. 환경변수에서 받은 사용자 ID와 비밀번호를 입력한다.
+3. 로그인 폼을 제출한다.
+4. 브라우저가 로그인 URL에서 벗어났는지 확인한다.
+5. Data Portal 메인 화면이 표시되는지 확인한다.
 
-Selectors:
+주요 셀렉터:
 
-1. User ID input: `#usrId`
-2. Password input: `#pswd`
-3. Login button: `button.submit`
-4. Successful landing signal: heading text matching `Welcome to Data Portal`
+1. 사용자 ID 입력칸: `#usrId`
+2. 비밀번호 입력칸: `#pswd`
+3. 로그인 버튼: `button.submit`
+4. 로그인 성공 확인 기준: `Welcome to Data Portal` 제목 표시
 
-Expected result:
+기대 결과:
 
-1. Login completes within 15 seconds.
-2. The final page is not `/iruda_woori/login`.
-3. The Data Portal heading is visible.
+1. 로그인이 15초 이내에 완료된다.
+2. 최종 URL이 `/iruda_woori/login`이 아니다.
+3. Data Portal 제목이 화면에 표시된다.
 
-Latest verified result:
+마지막 검증 결과:
 
-- Local Chromium run with environment credentials: passed
-- GitHub Actions run without credentials: login test skipped, smoke tests passed
+- 환경변수 계정을 사용한 로컬 Chromium 실행: 통과
+- GitHub Actions 실행: 계정 정보가 없어 로그인 테스트는 스킵, smoke 테스트는 통과
 
-## 4. Execution History
+## 4. 실행 이력
 
-1. `2026-07-02` - Added Playwright project scaffold and GitHub Actions workflow. GitHub Actions passed with smoke tests.
-2. `2026-07-02` - Added `TC-001 Login`. Local Chromium login test passed. GitHub Actions passed with login test skipped because credentials were not configured.
-3. `2026-07-02` - Added numbered test plan structure and update rule.
+1. `2026-07-02` - Playwright 프로젝트 기본 구조와 GitHub Actions 워크플로를 추가했다. GitHub Actions에서 smoke 테스트 통과.
+2. `2026-07-02` - `TC-001 로그인`을 추가했다. 로컬 Chromium 로그인 테스트 통과. GitHub Actions에서는 계정 정보 미설정으로 로그인 테스트 스킵, smoke 테스트 통과.
+3. `2026-07-02` - 번호형 테스트 계획서 구조와 업데이트 규칙을 추가했다.
+4. `2026-07-02` - 테스트 계획서를 한글 문서로 변경했다.
 
-## 5. CI Notes
+## 5. CI 참고사항
 
-GitHub-hosted runners usually cannot access private `10.x` network addresses. To run internal IRUDA tests in CI, use one of these approaches:
+GitHub hosted runner는 일반적으로 사설 `10.x` 네트워크 주소에 접근할 수 없다. 내부 IRUDA 테스트를 CI에서 실행하려면 다음 중 하나가 필요하다.
 
-1. Configure a self-hosted runner inside the internal network.
-2. Provide VPN/internal network access to the runner.
-3. Run the login test locally and keep GitHub Actions limited to public or mockable checks.
+1. 내부망에 self-hosted runner를 구성한다.
+2. runner가 VPN 또는 내부망에 접근할 수 있게 구성한다.
+3. 로그인 테스트는 로컬에서 실행하고 GitHub Actions는 공개 접근 가능하거나 mock 가능한 테스트 위주로 유지한다.
 
-When credentials are not configured, the login test is skipped and the smoke test still runs.
+계정 정보가 설정되지 않은 경우 로그인 테스트는 스킵되고 smoke 테스트는 계속 실행된다.
 
-## 6. Backlog
+## 6. 예정 시나리오
 
-Add scenarios here before implementing them:
+구현 전 후보 시나리오를 여기에 추가한다.
 
-1. `TC-002` Navigate to Data Catalog after login.
-2. `TC-003` Run a basic search and verify results load.
-3. `TC-004` Open a metadata detail page and verify key fields are visible.
-4. `TC-005` Validate logout behavior.
+1. `TC-002` 로그인 후 Data Catalog 메뉴로 이동한다.
+2. `TC-003` 기본 검색을 실행하고 결과 로딩을 확인한다.
+3. `TC-004` 메타데이터 상세 페이지를 열고 주요 필드가 표시되는지 확인한다.
+4. `TC-005` 로그아웃 동작을 검증한다.
