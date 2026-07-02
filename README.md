@@ -2,6 +2,8 @@
 
 Playwright-based browser automation test project.
 
+Test intent and scenario notes are tracked in `docs/test-plan.md`.
+
 ## Commands
 
 ```powershell
