@@ -41,7 +41,7 @@ async function searchCtq(page: Page, ctqName: string) {
 }
 
 async function selectCtqRow(page: Page, ctqName: string) {
-  await page.locator('#ctqManageGrid .slick-row').filter({ hasText: exactTextMatcher(`.*${ctqName}.*`) }).first().click({ force: true });
+  await page.locator('#ctqManageGrid .slick-row').filter({ hasText: ctqName }).first().click({ force: true });
   await page.waitForTimeout(1_000);
 }
 
