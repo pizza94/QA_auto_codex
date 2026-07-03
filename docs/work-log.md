@@ -163,22 +163,6 @@ GitHub 반영:
 - `docs/work-log.md`
 - `package.json`
 
-주요 셀렉터:
-
-- CTQ 영역: `#ctqRegion`
-- 신규: `#newCtqButton`
-- 삭제: `#deleteCtqButton`
-- 검색 입력: `.search-panel-wrapper input[name="ctqName"]`
-- 저장: `#saveCtqButton`
-- CTQ 목록 그리드: `#ctqManageGrid`
-- CTQ명: `#ctqInfo #ctqName`
-- CTQ 설명: `#ctqInfo #ctqDesc`
-- 컬럼등록: `#showCtqColumnButton`
-- 컬럼등록 팝업 그리드: `#ctqColumnsGrid`
-- 매핑 그리드: `#ctqMappingInfoGrid`
-- 컬럼삭제: `#ctqMappingInfoDeleteButton`
-- 매핑 리포트: `#ctqMappingExcel`
-
 검증 결과:
 
 - CTQ 메뉴 진입: 통과.
@@ -198,3 +182,21 @@ GitHub 반영:
 
 - `3b9584f` - CTQ 자동화 테스트, 실행 결과 문서, 테스트 계획서, 작업 이력 추가.
 - `ddd98b6` - CTQ 목록 행 선택 로직 안정화.
+- `759a90b` - 작업 이력에 CTQ 커밋 기록 추가.
+
+### Excel 호환 TC/결과 관리 파일 추가
+
+작업 내용:
+
+- 테스트 케이스와 최근 실행 결과를 Excel에서 관리할 수 있도록 CSV 기반 TC 파일을 추가했다.
+- DQI/CTQ 자동화 TC를 세부 검증항목 단위로 정리했다.
+- 결과값은 `PASS`, `WARN`, `FAIL`, `SKIP` 기준으로 관리하도록 했다.
+
+주요 파일:
+
+- `docs/test-cases/README.md`
+- `docs/test-cases/qa-test-cases.csv`
+
+GitHub 반영:
+
+- 이번 커밋 - Excel 호환 TC/결과 관리 파일 추가.
