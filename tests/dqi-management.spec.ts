@@ -84,9 +84,22 @@ async function saveDqi(page: Page) {
   return clickAndAcceptDialog(page, () => page.locator('#dqiSaveButton').click(), '저장에 성공하였습니다.');
 }
 
-async function openAllTree(page: Page) {
-  await page.locator('#allOpenButton').click();
-  await page.waitForTimeout(1_000);
+async function treeToggleText(page: Page) {
+  return (await page.locator('#allOpenButton').innerText()).replace(/\s+/g, '');
+}
+
+async function ensureAllTreeOpen(page: Page) {
+  if ((await treeToggleText(page)).includes('모두열기')) {
+    await page.locator('#allOpenButton').click();
+    await page.waitForTimeout(1_000);
+  }
+}
+
+async function ensureAllTreeClosed(page: Page) {
+  if ((await treeToggleText(page)).includes('모두닫기')) {
+    await page.locator('#allOpenButton').click();
+    await page.waitForTimeout(1_000);
+  }
 }
 
 async function treeTexts(page: Page) {
@@ -111,7 +124,7 @@ async function deleteTreeNodeIfPresent(page: Page, nodeText: string) {
   await page.goto(dqiPagePath);
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(2_000);
-  await openAllTree(page);
+  await ensureAllTreeOpen(page);
 
   const nodes = await treeTexts(page);
   if (!nodes.includes(nodeText)) {
@@ -198,15 +211,16 @@ test.describe('QualityStream DQI management', () => {
       });
 
       await test.step('tree open and close buttons toggle tree visibility state', async () => {
-        await openAllTree(page);
+        await ensureAllTreeOpen(page);
         await expect(page.locator('#dqiTree .jstree-anchor').filter({ hasText: childName })).toBeVisible();
+        expect(await treeToggleText(page)).toContain('모두닫기');
 
-        await page.locator('#allOpenButton').click();
-        await page.waitForTimeout(1_000);
-        await expect(page.locator('#dqiTree').getByText(parentName, { exact: true })).toBeVisible();
+        await ensureAllTreeClosed(page);
+        expect(await treeToggleText(page)).toContain('모두열기');
       });
 
       await test.step('search returns DQI by exact and partial input', async () => {
+        await ensureAllTreeOpen(page);
         const search = page.locator('#dqiTree #tableTreeSearch');
 
         await search.fill(childName);
@@ -227,7 +241,7 @@ test.describe('QualityStream DQI management', () => {
 
       await test.step('edit child DQI and verify values after reload', async () => {
         await page.locator('#dqiTree #tableTreeSearch').fill('');
-        await openAllTree(page);
+        await ensureAllTreeOpen(page);
         await selectTreeNode(page, childName);
 
         await setVisibleField(page, 'subDqiName', editedChildName);
@@ -238,7 +252,7 @@ test.describe('QualityStream DQI management', () => {
         await page.goto(dqiPagePath);
         await page.waitForLoadState('domcontentloaded');
         await page.waitForTimeout(2_000);
-        await openAllTree(page);
+        await ensureAllTreeOpen(page);
         await selectTreeNode(page, editedChildName);
 
         expect(await treeTexts(page)).toContain(editedChildName);
