@@ -6,6 +6,7 @@
     "test": "playwright test",
     "test:login": "playwright test tests/login.spec.ts",
     "test:qualitystream": "playwright test tests/qualitystream.spec.ts",
+    "test:dqi": "playwright test tests/dqi-management.spec.ts",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
     "report": "playwright show-report"
