@@ -101,22 +101,6 @@
 - `docs/test-plan.md`
 - `package.json`
 
-주요 셀렉터:
-
-- DQI 영역: `#dqiRegion`
-- 신규: `#newNodeButton`
-- 저장: `#dqiSaveButton`
-- 트리 검색: `#dqiTree #tableTreeSearch`
-- 모두열기/모두닫기: `#allOpenButton`
-- 대분류명: `[name="dqiName"]`
-- 소분류명: `[name="subDqiName"]`
-- 대분류 설명: `[name="dqiDesc"]`
-- 소분류 설명: `[name="subDqiDesc"]`
-- 목표수준: `[name="desiredQuality"]`
-- BR상세정보: `#brDetailInfo`
-- 연관BR 리포트: `#brReport`
-- 트리 우클릭 메뉴: `.vakata-context`
-
 검증 결과:
 
 - DQI 메뉴 진입: 통과.
@@ -148,3 +132,64 @@ GitHub 반영:
 주요 파일:
 
 - `docs/work-log.md`
+
+GitHub 반영:
+
+- `410278d` - 날짜별 작업 이력 문서 추가.
+
+### TC-004 데이터품질핵심정보(CTQ)관리 자동화 검증 및 GitHub 반영
+
+작업 내용:
+
+- `검증기준관리 > 데이터품질핵심정보(CTQ)관리` 메뉴를 실제 화면에서 자동화로 검증했다.
+- CTQ 신규 생성 후 하단 CTQ컬럼기본정보 상세영역 활성화를 확인했다.
+- `CTQ명`, `CTQ 설명` 필수값 빨간 별표 표시를 확인했다.
+- 필수값 미입력 저장 차단과 `필수 입력입니다.` 메시지를 확인했다.
+- CTQ를 저장하고 목록 선택 시 하단 상세정보가 입력값과 일치하는지 확인했다.
+- CTQ컬럼매핑 정보 탭에서 컬럼등록 팝업을 열고 컬럼을 등록했다.
+- 매핑 리포트 다운로드를 확인했다.
+- 컬럼삭제와 CTQ 최종 삭제를 검증했다.
+
+테스트 데이터:
+
+- CTQ명: `AUTO_CTQ_20260703074150`
+- CTQ 설명: `AUTO CTQ 설명 20260703074150`
+
+주요 파일:
+
+- `tests/ctq-management.spec.ts`
+- `docs/ctq-management-run-2026-07-03.md`
+- `docs/test-plan.md`
+- `docs/work-log.md`
+- `package.json`
+
+주요 셀렉터:
+
+- CTQ 영역: `#ctqRegion`
+- 신규: `#newCtqButton`
+- 삭제: `#deleteCtqButton`
+- 검색 입력: `.search-panel-wrapper input[name="ctqName"]`
+- 저장: `#saveCtqButton`
+- CTQ 목록 그리드: `#ctqManageGrid`
+- CTQ명: `#ctqInfo #ctqName`
+- CTQ 설명: `#ctqInfo #ctqDesc`
+- 컬럼등록: `#showCtqColumnButton`
+- 컬럼등록 팝업 그리드: `#ctqColumnsGrid`
+- 매핑 그리드: `#ctqMappingInfoGrid`
+- 컬럼삭제: `#ctqMappingInfoDeleteButton`
+- 매핑 리포트: `#ctqMappingExcel`
+
+검증 결과:
+
+- CTQ 메뉴 진입: 통과.
+- 필수값 빨간 별표: 통과. `::after` content `*`, color `rgb(217, 45, 32)` 확인.
+- 필수값 미입력 저장 차단: 통과.
+- CTQ 생성 및 상세정보 조회: 통과.
+- 컬럼등록: 통과. 등록 후 컬럼건수 60으로 표시.
+- 리포트 다운로드: 통과. 파일명 `CtqMappingColumnList.xlsx`, 크기 8296 bytes, XLSX 시그니처 `504b0304` 확인.
+- 컬럼삭제: 통과. 삭제 후 컬럼건수 0, 매핑행 0건 표시.
+- CTQ 삭제 및 재조회: 통과.
+
+확인 필요:
+
+- MCP 실행 컨텍스트 제한으로 XLSX 내부 문자열 압축 해제 검증은 하지 못했다. 자동화 spec에서는 파일명, 크기, XLSX 시그니처를 검증한다.
