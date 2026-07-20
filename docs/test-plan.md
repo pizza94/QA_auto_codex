@@ -12,7 +12,7 @@
    1. [TC-001 로그인](#tc-001-로그인)
    2. [TC-002 QualityStream 메뉴 진입 및 구조 확인](#tc-002-qualitystream-메뉴-진입-및-구조-확인)
    3. [TC-003 데이터품질지표(DQI)관리 CRUD 및 Search 검증](#tc-003-데이터품질지표dqi관리-crud-및-search-검증)
-   4. [TC-004 데이터품질핵심정보(CTQ)관리 컬럼매핑 검증](#tc-004-데이터품질핵심정보ctq관리-컬럼매핑-검증)
+   4. [TC-004 데이터품질핵심정보(CTQ)관리 컬럼매핑 및 CTQ 적재 검증](#tc-004-데이터품질핵심정보ctq관리-컬럼매핑-및-ctq-적재-검증)
 4. [실행 이력](#4-실행-이력)
 5. [CI 참고사항](#5-ci-참고사항)
 6. [예정 시나리오](#6-예정-시나리오)
@@ -160,13 +160,13 @@
 - 연관BR 리포트는 관련 BR 결과가 없어 `출력할 검색 결과가 없습니다.` 알림 표시
 - 테스트 데이터 삭제 후 재조회에서 미노출 확인
 
-### TC-004 데이터품질핵심정보(CTQ)관리 컬럼매핑 검증
+### TC-004 데이터품질핵심정보(CTQ)관리 컬럼매핑 및 CTQ 적재 검증
 
 상태: 구현 완료, 브라우저 자동화 수동 검증 완료
 
 파일: `tests/ctq-management.spec.ts`
 
-참고 문서: `docs/ctq-management-run-2026-07-03.md`
+참고 문서: `docs/ctq-management-run-2026-07-03.md`, `docs/ctq-upload-run-2026-07-20.md`
 
 목적:
 
@@ -176,25 +176,28 @@
 4. CTQ를 저장한 뒤 목록 선택 시 하단 상세정보가 입력값과 일치하는지 확인한다.
 5. `CTQ컬럼매핑 정보` 탭에서 컬럼등록 팝업을 열고 컬럼을 등록한다.
 6. 매핑 리포트를 다운로드하고 XLSX 파일 형식을 확인한다.
-7. 매핑 컬럼삭제와 CTQ 최종 삭제를 검증한다.
+7. `CTQ적재 양식` 버튼으로 적재 양식을 다운로드하고 XLSX 파일 형식을 확인한다.
+8. 검증대상관리의 `반영여부=Y` 컬럼정보 기준 테스트값을 입력한 엑셀 파일을 `CTQ적재`로 업로드하고 목록 등록 여부를 확인한다.
+9. 테스트 데이터는 삭제하지 않고 등록 상태로 남긴다.
 
 주요 셀렉터 및 검증 기준:
 
 1. CTQ 영역: `#ctqRegion`
 2. 신규 버튼: `#newCtqButton`
-3. 삭제 버튼: `#deleteCtqButton`
-4. 검색 입력: `.search-panel-wrapper input[name="ctqName"]`
-5. 검색 버튼: `.search-panel-search-btn`
-6. CTQ 목록 그리드: `#ctqManageGrid`
-7. 하단 탭 영역: `#ctqTabs`
-8. CTQ명: `#ctqInfo #ctqName`
-9. CTQ 설명: `#ctqInfo #ctqDesc`
-10. 저장 버튼: `#saveCtqButton`
-11. 컬럼등록 버튼: `#showCtqColumnButton`
-12. 컬럼등록 팝업 그리드: `#ctqColumnsGrid`
-13. 매핑 그리드: `#ctqMappingInfoGrid`
-14. 컬럼삭제 버튼: `#ctqMappingInfoDeleteButton`
-15. 매핑 리포트 버튼: `#ctqMappingExcel`
+3. 검색 입력: `.search-panel-wrapper input[name="ctqName"]`
+4. 검색 버튼: `.search-panel-search-btn`
+5. CTQ 목록 그리드: `#ctqManageGrid`
+6. 하단 탭 영역: `#ctqTabs`
+7. CTQ명: `#ctqInfo #ctqName`
+8. CTQ 설명: `#ctqInfo #ctqDesc`
+9. 저장 버튼: `#saveCtqButton`
+10. 컬럼등록 버튼: `#showCtqColumnButton`
+11. 컬럼등록 팝업 그리드: `#ctqColumnsGrid`
+12. 매핑 그리드: `#ctqMappingInfoGrid`
+13. 매핑 리포트 버튼: `#ctqMappingExcel`
+14. CTQ 적재양식 버튼: `#ctqFormExcel`
+15. CTQ 적재 버튼: `#ctqUpload`
+16. CTQ 적재 업로드 파일 입력: `.ui-dialog:visible input[type="file"][name="uploadFile"]`
 
 기대 결과:
 
@@ -203,17 +206,19 @@
 3. 신규 CTQ가 저장되고 목록과 하단 상세영역 값이 일치한다.
 4. 컬럼등록 후 매핑 그리드에 컬럼 데이터가 표시되고 컬럼건수가 반영된다.
 5. 리포트 파일 `CtqMappingColumnList.xlsx`가 다운로드되고 XLSX 시그니처가 확인된다.
-6. 컬럼삭제 후 매핑행이 감소하거나 제거된다.
-7. CTQ 삭제 후 재조회 시 테스트 데이터가 더 이상 표시되지 않는다.
+6. `CtqInfo.xlsx` 양식이 다운로드되고 XLSX 시그니처가 확인된다.
+7. 테스트값이 입력된 CTQ 적재 엑셀 업로드 후 성공 1건과 목록 등록이 확인된다.
+8. 테스트 종료 후 생성한 CTQ와 매핑 컬럼이 유지된다.
 
 마지막 검증 결과:
 
-- CTQ 생성, 필수값 검증, 상세정보 일치, 컬럼등록, 리포트 다운로드, 컬럼삭제, CTQ 삭제까지 확인: 통과
+- CTQ 생성, 필수값 검증, 상세정보 일치, 컬럼등록, 리포트 다운로드까지 확인: 통과
+- CTQ 적재양식 다운로드, 테스트값 입력 엑셀 업로드, 목록 등록 확인까지 확인: 통과
 - 리포트 다운로드 파일명: `CtqMappingColumnList.xlsx`
-- 다운로드 파일 크기: 8296 bytes
 - XLSX ZIP 시그니처: `504b0304`
-- MCP 실행 컨텍스트 제한으로 XLSX 내부 문자열 압축 해제 검증은 미수행
-- 테스트 데이터 삭제 후 재조회에서 미노출 확인
+- 테스트 데이터는 삭제하지 않고 등록 상태로 유지
+- CTQ 적재 테스트 데이터는 검증대상관리의 `반영여부=Y` 컬럼정보 기준 값(`TEST`, `TEST1`, `ORA19C`, `META_A`, `TB_BYDVN_CD_ACCUM`, `DMN_ID`)을 사용
+- 업로드 엑셀은 실행 중 동적으로 생성하며, 동일 계정 병렬 로그인 영향이 있어 단일 worker 조건에서 최종 검증
 
 ## 4. 실행 이력
 
@@ -224,6 +229,7 @@
 5. `2026-07-02` - 실제 QualityStream 메뉴와 로컬 TC Excel 기능 시트를 비교해 `TC-002 QualityStream 메뉴 진입 및 구조 확인`을 추가했다.
 6. `2026-07-03` - `TC-003 데이터품질지표(DQI)관리 CRUD 및 Search 검증` 자동화 테스트와 실행 결과 문서를 추가했다.
 7. `2026-07-03` - `TC-004 데이터품질핵심정보(CTQ)관리 컬럼매핑 검증` 자동화 테스트와 실행 결과 문서를 추가했다.
+8. `2026-07-20` - `TC-004 데이터품질핵심정보(CTQ)관리 CTQ 적재 검증` 자동화 테스트와 실행 결과 문서를 추가했다.
 
 ## 5. CI 참고사항
 

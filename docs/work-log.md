@@ -200,3 +200,36 @@ GitHub 반영:
 GitHub 반영:
 
 - 이번 커밋 - Excel 호환 TC/결과 관리 파일 추가.
+
+## 2026-07-20
+
+### TC-004 CTQ 적재양식 다운로드 및 엑셀 업로드 자동화 추가
+
+작업 내용:
+
+- `데이터품질핵심정보(CTQ)관리` 화면의 `CTQ적재 양식` 버튼으로 `CtqInfo.xlsx` 다운로드를 검증했다.
+- 검증대상관리 메뉴의 `반영여부=Y` 대상과 하단 컬럼정보에서 확인 가능한 값을 기준으로 CTQ 적재 샘플 엑셀을 구성했다.
+- `CTQ적재` 버튼으로 업로드 팝업을 열고 샘플 엑셀 업로드 성공 1건을 검증했다.
+- 업로드 후 CTQ 목록에서 등록 여부를 조회하고, 테스트 데이터는 삭제하지 않고 등록 상태로 남겼다.
+- 업로드 엑셀은 실행 중 동적으로 생성해 CTQ명이 매번 중복되지 않도록 했다.
+
+테스트 데이터:
+
+- CTQ명: `AUTO_CTQ_UPLOAD_{PROJECT}_{YYYYMMDDHHMMSS}`
+- 시스템/업무구분/DB/소유자: `TEST` / `TEST1` / `ORA19C` / `META_A`
+- 테이블ID/컬럼ID: `TB_BYDVN_CD_ACCUM` / `DMN_ID`
+- 컬럼순서/데이터타입/PK/FK/NN: `2` / `VARCHAR2(200)` / `N/N/N`
+
+주요 파일:
+
+- `tests/ctq-management.spec.ts`
+- `docs/ctq-upload-run-2026-07-20.md`
+- `docs/test-plan.md`
+- `docs/test-cases/qa-test-cases.csv`
+
+검증 결과:
+
+- Chromium 단독 실행: 통과.
+- Chromium/Firefox/WebKit 단일 worker 실행: 3 passed.
+- 삭제 정리 제거 후 Chromium 단독 실행: 통과.
+- 기본 병렬 실행에서는 동일 계정 동시 로그인 영향으로 Chromium이 로그인 화면에 머무는 현상이 있어, CI와 같은 단일 worker 조건에서 최종 검증했다.
