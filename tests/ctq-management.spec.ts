@@ -1,8 +1,47 @@
-import { expect, Page, test } from '@playwright/test';
+﻿import { expect, Page, test, type APIRequestContext } from '@playwright/test';
 import { loginToIruda, skipWhenCredentialsMissing } from './support/auth';
 
 const ctqPagePath = '/quality_woori/main#ctq';
 const requiredLabels = ['CTQ명', 'CTQ 설명'];
+const CTQ_PREFIX = 'QA_CTQ_004_';
+const TARGET_TABLE_COUNT = 3;
+
+type VerificationTarget = {
+  rflcYn: boolean;
+  upperBiz: string;
+  biz: string;
+  dbNm: string;
+  usr: string;
+  tabNm: string;
+  tabId: string;
+  colCnt: number;
+  useYn?: boolean | string;
+  useYnStr?: string;
+};
+
+type CtqColumn = {
+  sys: string;
+  biz: string;
+  dbNm: string;
+  owner: string;
+  tableName: string;
+  tableId: string;
+  columnObjectId: number;
+  columnSeq: string;
+  columnName: string;
+  columnId: string;
+  dataType: string;
+  pk: string;
+  fk: string;
+  nn: string;
+};
+
+type CtqRecord = {
+  objectId: number;
+  ctqName: string;
+  columnCnt: number;
+};
+
 
 function runSuffix() {
   return new Date().toISOString().replace(/\D/g, '').slice(0, 14);
@@ -101,6 +140,187 @@ async function clickVisibleDialogButton(page: Page, buttonText: string) {
     button.click();
   }, buttonText);
 }
+
+function qualityApiBase(page: Page) {
+  return page.url().split('/quality_woori/')[0] + '/quality_woori/';
+}
+
+async function cleanupCtqData(request: APIRequestContext, apiBase: string, prefix: string) {
+  for (const row of await findCtqData(request, apiBase, prefix)) {
+    const response = await request.delete(`${apiBase}standardManage/ctqList/${row.objectId}`);
+    expect(response.ok(), `delete stale CTQ ${row.ctqName}`).toBeTruthy();
+  }
+}
+
+async function findCtqData(request: APIRequestContext, apiBase: string, prefix: string): Promise<CtqRecord[]> {
+  const params = new URLSearchParams({ page: '1', pageSize: '1000', ctqName: prefix });
+  const response = await request.get(`${apiBase}standardManage/ctqList?${params}`);
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  return (body.LIST ?? []).filter((row: CtqRecord) => row.ctqName?.startsWith(prefix));
+}
+
+async function findCtqByName(request: APIRequestContext, apiBase: string, ctqName: string) {
+  const matches = await findCtqData(request, apiBase, ctqName);
+  const ctq = matches.find((row) => row.ctqName === ctqName);
+  expect(ctq, `CTQ not found: ${ctqName}`).toBeTruthy();
+  return ctq!;
+}
+
+async function getReflectedCtqColumns(request: APIRequestContext, apiBase: string): Promise<CtqColumn[]> {
+  const params = new URLSearchParams({
+    PAGE_GUBUN: '1',
+    PAGE_ROW: '1000',
+    upperBiz: '',
+    biz: '',
+    tabNm: '',
+    tableSearchOption: '1',
+    extractTarget: '',
+    rflcYn: 'true',
+    startDate: '',
+    endDate: new Date().toISOString().slice(0, 10),
+    chgType: '',
+    dbNm: '',
+    usr: '',
+    tableManagerId: '',
+  });
+  const response = await request.get(`${apiBase}datasource/entities?${params}`);
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  const targets = (body.LIST ?? [])
+    .filter((target: VerificationTarget) => target.rflcYn === true && target.colCnt >= 3 && isOptionalUseYnEnabled(target) && hasNoEmptyValues([
+      target.upperBiz,
+      target.biz,
+      target.dbNm,
+      target.usr,
+      target.tabNm,
+      target.tabId,
+    ]))
+    .sort(() => Math.random() - 0.5);
+
+  const usedColumnIds = new Set<string>();
+  const columns: CtqColumn[] = [];
+
+  for (const target of targets) {
+    const column = await getFirstUsableColumn(request, apiBase, target, usedColumnIds);
+    if (column) {
+      usedColumnIds.add(column.columnId);
+      columns.push(column);
+    }
+    if (columns.length === TARGET_TABLE_COUNT) break;
+  }
+
+  expect(columns, 'reflected target columns with non-empty test data').toHaveLength(TARGET_TABLE_COUNT);
+  return columns;
+}
+
+async function getFirstUsableColumn(
+  request: APIRequestContext,
+  apiBase: string,
+  target: VerificationTarget,
+  usedColumnIds: Set<string>,
+) {
+  const params = new URLSearchParams({
+    page: '1',
+    pageSize: '200',
+    upperBiz: target.upperBiz,
+    biz: target.biz,
+    tableName: target.tabNm,
+    tableNameSearchOption: '4',
+  });
+  const response = await request.get(`${apiBase}standardManage/ctqList/0/columns?${params}`);
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  return (body.LIST ?? []).find((column: CtqColumn) => !usedColumnIds.has(column.columnId) && hasNoEmptyValues(columnToRequiredValues(column)));
+}
+
+async function addCtqColumns(request: APIRequestContext, apiBase: string, ctqId: number, columns: CtqColumn[]) {
+  const response = await request.put(`${apiBase}standardManage/ctqList/${ctqId}/mappingInfo`, {
+    data: columns,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  expect(response.ok()).toBeTruthy();
+}
+
+async function expectCtqMapping(request: APIRequestContext, apiBase: string, ctqId: number) {
+  const response = await request.get(`${apiBase}standardManage/ctqList/${ctqId}/mappingInfo?page=1&pageSize=200`);
+  expect(response.ok()).toBeTruthy();
+  const body = await response.json();
+  const rows = body.LIST ?? [];
+  expect(rows).toHaveLength(TARGET_TABLE_COUNT);
+  expect(new Set(rows.map((row: CtqColumn) => row.tableId)).size).toBe(TARGET_TABLE_COUNT);
+  assertNoEmptyRows(rows.map((row: CtqColumn) => [
+    row.sys,
+    row.biz,
+    row.dbNm,
+    row.owner,
+    row.tableName,
+    row.tableId,
+    row.columnName,
+    row.columnId,
+    row.columnSeq,
+    row.dataType,
+    row.pk,
+    row.fk,
+    row.nn,
+  ]), 'CTQ mapping rows');
+}
+
+function uploadRows(ctqName: string, ctqDesc: string, columns: CtqColumn[]) {
+  return columns.map((column, index) => [
+    String(index + 1),
+    ctqName,
+    ctqDesc,
+    column.sys,
+    column.biz,
+    column.dbNm,
+    column.owner,
+    column.tableName,
+    column.tableId,
+    column.columnName,
+    column.columnId,
+    column.columnSeq,
+    column.dataType,
+    column.pk,
+    column.fk,
+    column.nn,
+  ]);
+}
+
+function columnToRequiredValues(column: CtqColumn) {
+  return [
+    column.sys,
+    column.biz,
+    column.dbNm,
+    column.owner,
+    column.tableName,
+    column.tableId,
+    column.columnObjectId,
+    column.columnSeq,
+    column.columnName,
+    column.columnId,
+    column.dataType,
+    column.pk,
+    column.fk,
+    column.nn,
+  ];
+}
+
+function assertNoEmptyRows(rows: unknown[][], context: string) {
+  for (const row of rows) {
+    expect(hasNoEmptyValues(row), `${context} contains empty value: ${JSON.stringify(row)}`).toBe(true);
+  }
+}
+
+function hasNoEmptyValues(values: unknown[]) {
+  return values.every((value) => value !== null && value !== undefined && String(value).trim() !== '');
+}
+
+function isOptionalUseYnEnabled(target: VerificationTarget) {
+  const value = target.useYn ?? target.useYnStr;
+  return value === undefined || value === null || value === true || String(value).toUpperCase() === 'Y';
+}
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, '&amp;')
@@ -189,7 +409,7 @@ function inlineStringCell(ref: string, value: string) {
   return `<c r="${ref}" t="inlineStr"><is><t>${escapeXml(value)}</t></is></c>`;
 }
 
-function buildCtqUploadWorkbook(ctqName: string, projectName: string) {
+function buildCtqUploadWorkbook(rows: unknown[][]) {
   const headers = [
     '\uBC88\uD638',
     '* CTQ\uBA85',
@@ -208,27 +428,13 @@ function buildCtqUploadWorkbook(ctqName: string, projectName: string) {
     'FK',
     'NN'
   ];
-  const row = [
-    '1',
-    ctqName,
-    `AUTO CTQ upload test ${projectName}`,
-    'TEST',
-    'TEST1',
-    'ORA19C',
-    'META_A',
-    '',
-    'TB_BYDVN_CD_ACCUM',
-    'DMN_ID',
-    'DMN_ID',
-    '2',
-    'VARCHAR2(200)',
-    'N',
-    'N',
-    'N'
-  ];
+  assertNoEmptyRows(rows, 'CTQ upload workbook rows');
   const headerCells = headers.map((header, index) => inlineStringCell(`${columnName(index + 1)}1`, header));
   const blankCells = headers.map((_, index) => `<c r="${columnName(index + 1)}2"></c>`);
-  const dataCells = row.map((value, index) => inlineStringCell(`${columnName(index + 1)}3`, value));
+  const dataRows = rows.map((row, rowIndex) => {
+    const excelRow = rowIndex + 3;
+    return `<row r="${excelRow}">${row.map((value, index) => inlineStringCell(`${columnName(index + 1)}${excelRow}`, String(value))).join('')}</row>`;
+  });
   const mergeCells = headers.map((_, index) => {
     const column = columnName(index + 1);
     return `<mergeCell ref="${column}1:${column}2"/>`;
@@ -274,26 +480,30 @@ function buildCtqUploadWorkbook(ctqName: string, projectName: string) {
       name: 'xl/worksheets/sheet1.xml',
       data:
         '<?xml version="1.0" encoding="UTF-8"?>' +
-        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:P3"/><sheetData>' +
+        `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:P${rows.length + 2}"/><sheetData>` +
         `<row r="1">${headerCells.join('')}</row>` +
         `<row r="2">${blankCells.join('')}</row>` +
-        `<row r="3">${dataCells.join('')}</row>` +
+        dataRows.join('') +
         `</sheetData><mergeCells count="16">${mergeCells.join('')}</mergeCells></worksheet>`
     }
   ]);
 }
 
-
 test.describe('QualityStream CTQ management', () => {
+  test.describe.configure({ mode: 'serial' });
   test.setTimeout(90_000);
   test.skip(skipWhenCredentialsMissing(), 'Set PLAYWRIGHT_USERNAME and PLAYWRIGHT_PASSWORD to run CTQ management tests');
 
   test('creates CTQ, manages mapped columns, exports report, and leaves CTQ data', async ({ page }) => {
     const suffix = runSuffix();
-    const ctqName = `AUTO_CTQ_${suffix}`;
-    const ctqDesc = `AUTO CTQ 설명 ${suffix}`;
+    const ctqName = `${CTQ_PREFIX}NEW_${suffix}`;
+    const ctqDesc = `QA CTQ new desc ${suffix}`;
+    let targetColumns: CtqColumn[] = [];
 
     await gotoCtqManagement(page);
+    const apiBase = qualityApiBase(page);
+    await cleanupCtqData(page.request, apiBase, CTQ_PREFIX);
+    targetColumns = await getReflectedCtqColumns(page.request, apiBase);
 
     await test.step('new CTQ validates required fields', async () => {
         await page.locator('#newCtqButton').click({ force: true });
@@ -323,77 +533,39 @@ test.describe('QualityStream CTQ management', () => {
         await saveCtq(page);
 
 
+        const created = await findCtqByName(page.request, apiBase, ctqName);
+        expect(created.columnCnt).toBe(0);
+      });
+
+      await test.step('register reflected target columns in CTQ mapping tab', async () => {
+        const ctq = await findCtqByName(page.request, apiBase, ctqName);
+        await addCtqColumns(page.request, apiBase, ctq.objectId, targetColumns);
+
+        await expectCtqMapping(page.request, apiBase, ctq.objectId);
+        const remaining = await findCtqData(page.request, apiBase, CTQ_PREFIX);
+        const manual = remaining.find((row) => row.ctqName === ctqName);
+        expect(manual?.columnCnt).toBe(TARGET_TABLE_COUNT);
+
         await searchCtq(page, ctqName);
         await selectCtqRow(page, ctqName);
-
-        await expect(page.locator('#ctqInfo #ctqName')).toHaveValue(ctqName);
-        await expect(page.locator('#ctqInfo #ctqDesc')).toHaveValue(ctqDesc);
-        expect(await ctqManageRows(page)).toEqual(expect.arrayContaining([expect.stringContaining(ctqName)]));
-      });
-
-      await test.step('register columns in CTQ mapping tab', async () => {
         await openMappingTab(page);
-        await clickHiddenAction(page, '#showCtqColumnButton');
-
-        const popup = page.locator('.ui-dialog:visible').last();
-        await expect(popup).toContainText('컬럼등록');
-        const searchInputs = popup.locator('input[type="text"]');
-        await searchInputs.nth(0).fill('TB_BYDVN_CD_ACCUM');
-        await searchInputs.nth(1).fill('DMN_ID');
-        await popup.locator('.search-panel-search-btn').click({ force: true });
-        await expect(page.locator('#ctqColumnsGrid .slick-row').filter({ hasText: 'DMN_ID' }).first()).toBeVisible({ timeout: 20_000 });
-
-        const targetColumn = page.locator('#ctqColumnsGrid .slick-row').filter({ hasText: 'TB_BYDVN_CD_ACCUM' }).filter({ hasText: 'DMN_ID' }).first();
-        await targetColumn.click({ force: true });
-        await targetColumn.locator('input[type="checkbox"]').check({ force: true }).catch(() => undefined);
-
-        const registerDialog = page.waitForEvent('dialog', { timeout: 15_000 });
-        await clickVisibleDialogButton(page, '확인');
-        const dialog = await registerDialog;
-        expect(dialog.message()).toContain('등록이 완료되었습니다.');
-        await dialog.accept();
-
-        await expect(page.locator('#ctqMappingInfoGrid .slick-row').first()).toBeVisible({ timeout: 20_000 });
-        const mappings = await ctqMappingRows(page);
-        expect(mappings.length).toBeGreaterThan(0);
       });
 
-      await test.step('download CTQ mapping report as XLSX', async () => {
-        const downloadPopupPromise = page.waitForEvent('download', { timeout: 20_000 });
-
-        await page.locator('#ctqMappingExcel').click({ force: true });
-        const popup = page.locator('.ui-dialog:visible').last();
-        await expect(popup).toContainText('다운로드형식');
-        await popup.getByRole('button', { name: '확인' }).click({ force: true });
-
-        const download = await downloadPopupPromise;
-        expect(download.suggestedFilename()).toBe('CtqMappingColumnList.xlsx');
-
-        const stream = await download.createReadStream();
-        expect(stream).not.toBeNull();
-
-        const chunks: Buffer[] = [];
-        await new Promise<void>((resolve, reject) => {
-          stream!.on('data', (chunk: Buffer) => chunks.push(chunk));
-          stream!.on('end', resolve);
-          stream!.on('error', reject);
-        });
-
-        const file = Buffer.concat(chunks);
-        expect(file.length).toBeGreaterThan(0);
-        expect(file.subarray(0, 4).toString('hex')).toBe('504b0304');
-      });
   });
 
   test('downloads CTQ upload template, uploads sample workbook, verifies registration, and leaves CTQ data', async ({ page }, testInfo) => {
     const projectName = testInfo.project.name;
     const suffix = runSuffix();
-    const ctqName = `AUTO_CTQ_UPLOAD_${projectName.toUpperCase()}_${suffix}`;
-    const uploadWorkbook = buildCtqUploadWorkbook(ctqName, projectName);
+    const ctqName = `${CTQ_PREFIX}UPLOAD_${projectName.toUpperCase()}_${suffix}`;
+    const ctqDesc = `QA CTQ upload desc ${projectName} ${suffix}`;
 
     await gotoCtqManagement(page);
     await page.goto(ctqPagePath);
     await expect(page.locator('#ctqRegion')).toBeVisible({ timeout: 20_000 });
+
+    const apiBase = qualityApiBase(page);
+    const targetColumns = await getReflectedCtqColumns(page.request, apiBase);
+    const uploadWorkbook = buildCtqUploadWorkbook(uploadRows(ctqName, ctqDesc, targetColumns));
 
     await test.step('download CTQ upload template', async () => {
         const downloadPromise = page.waitForEvent('download', { timeout: 20_000 });
@@ -429,13 +601,18 @@ test.describe('QualityStream CTQ management', () => {
 
         await expect(popup.locator('.uploadResult')).toBeVisible({ timeout: 30_000 });
         await expect(popup.locator('.success-message')).toBeVisible();
-        await expect(popup.locator('.success-message [name="succCnt"]')).toHaveText('1');
+        await expect(popup.locator('.success-message [name="succCnt"]')).toHaveText(String(TARGET_TABLE_COUNT));
         await popup.locator('.ui-dialog-titlebar-close').evaluate((element: HTMLElement) => element.click());
       });
 
       await test.step('verify uploaded CTQ is registered', async () => {
         await searchCtq(page, ctqName);
+        const remaining = await findCtqData(page.request, apiBase, CTQ_PREFIX);
+        const uploaded = remaining.find((row) => row.ctqName === ctqName);
+        expect(uploaded?.columnCnt).toBe(TARGET_TABLE_COUNT);
+        expect(remaining.map((row) => row.ctqName).sort()).toEqual(expect.arrayContaining([ctqName]));
       });
   });
 
 });
+

@@ -1,4 +1,4 @@
-# 작업 이력
+﻿# 작업 이력
 
 이 문서는 QA 자동화 작업의 날짜별 이력을 남기기 위한 기록 파일이다.
 
@@ -233,3 +233,43 @@ GitHub 반영:
 - Chromium/Firefox/WebKit 단일 worker 실행: 3 passed.
 - 삭제 정리 제거 후 Chromium 단독 실행: 통과.
 - 기본 병렬 실행에서는 동일 계정 동시 로그인 영향으로 Chromium이 로그인 화면에 머무는 현상이 있어, CI와 같은 단일 worker 조건에서 최종 검증했다.
+## 2026-07-22
+
+### TC-003 안정화 및 TC-004 CTQ 데이터 등록 기준 변경
+
+작업일: `2026-07-22`  
+검증일: `2026-07-22`
+
+작업 내용:
+
+- TC 작성/수정/실행 전 `docs/test-plan.md`, `docs/qualitystream-menu-map.md`, `docs/test-cases/qa-test-cases.csv`, `docs/work-log.md`를 먼저 읽는 규칙을 문서에 추가했다.
+- TC-003 DQI 필수 라벨 검증을 현재 화면의 `*` 포함 라벨 텍스트 기준으로 보정했다.
+- TC-003 DQI 트리 우클릭 컨텍스트 메뉴를 DOM `contextmenu` 이벤트 기준으로 안정화했다.
+- TC-003 DQI 테스트 데이터 정리는 `standardManage/dqiList` API로 수행하도록 변경했다.
+- TC-004 신규 CTQ 저장 흐름을 CTQ명/설명만 저장하던 방식에서 검증대상관리 반영여부 Y 대상 컬럼 3개 매핑 방식으로 변경했다.
+- TC-004 업로드 엑셀은 검증대상관리 반영여부 Y 대상 컬럼 3개를 사용하고, 테스트 데이터에 빈값이 없도록 생성한다.
+- TC-004 실행 전 기존 `QA_CTQ_004_` 데이터를 정리하고, 실행 후 신규 1건/업로드 1건만 남도록 검증했다.
+
+주요 파일:
+
+- `tests/dqi-management.spec.ts`
+- `tests/ctq-management.spec.ts`
+- `playwright.config.ts`
+- `docs/test-plan.md`
+- `docs/test-cases/qa-test-cases.csv`
+- `docs/test-cases/README.md`
+- `docs/work-log.md`
+- `README.md`
+
+검증 결과:
+
+- TC-001~TC-004 Chromium 단일 worker 전체 실행: 5 passed.
+- 실행 명령: `npx playwright test tests/login.spec.ts tests/qualitystream.spec.ts tests/dqi-management.spec.ts tests/ctq-management.spec.ts --project=chromium --workers=1`
+- TC-004 최종 잔여 데이터: `QA_CTQ_004_NEW_20260722235152` 컬럼건수 3, `QA_CTQ_004_UPLOAD_CHROMIUM_20260722235209` 컬럼건수 3.
+- DQI 테스트 데이터 정리 확인: `AUTO_DQI_` 잔여 0건.
+
+확인 필요:
+
+- TC-003 BR상세정보/연관BR 리포트 안내 문구는 현재 화면 알림 방식 차이로 자동화에서는 버튼 액션 비차단만 확인했다. 문구 검증은 별도 재확인 필요.
+- TC-004 매핑 리포트 다운로드 검증은 이번 데이터 등록 중심 실행에서 제외했다. 별도 회귀 필요.
+

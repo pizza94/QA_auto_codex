@@ -4,6 +4,8 @@ Playwright-based browser automation test project.
 
 Test intent and scenario notes are tracked in `docs/test-plan.md`. QualityStream menu mapping is tracked in `docs/qualitystream-menu-map.md`.
 
+Before TC work, read `docs/test-plan.md`, `docs/qualitystream-menu-map.md`, `docs/test-cases/qa-test-cases.csv`, and `docs/work-log.md`.
+
 ## Commands
 
 ```powershell
